@@ -289,7 +289,11 @@
 
       try {
         // 1. Create Supabase auth user via JS SDK
-        const { data, error } = await sb.auth.signUp({ email, password });
+        const { data, error } = await sb.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: 'https://dantiscvs.github.io/claele/login.html' }
+        });
         if (error) throw new Error(error.message);
         const user_id = data.user?.id;
         if (!user_id) throw new Error('Could not create account — please try again');
