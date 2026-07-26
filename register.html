@@ -302,7 +302,7 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error_description || data.message || 'Registration failed');
-        const user_id = data.user?.id;
+        const user_id = data.user?.id || data.id;
         if (!user_id) throw new Error('Could not create account — please try again');
 
         // 2. Extract Gemini content (handles ZIP automatically)
