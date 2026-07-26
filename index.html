@@ -210,8 +210,10 @@
       showScreen('widget');
 
       // Post-call: save memories with user_id
+      let postCallSent = false;
       function triggerPostCall(conversationId) {
-        if (!conversationId) return;
+        if (!conversationId || postCallSent) return;
+        postCallSent = true;
         fetch('https://theadventure.app.n8n.cloud/webhook/claele-post-call', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -219,16 +221,18 @@
         }).catch(() => {});
       }
 
-      window.addEventListener('elevenlabs-convai:disconnect', function (e) {
-        triggerPostCall(e.detail?.conversation_id || e.detail?.conversationId);
+      function getConvId(e) {
+        return e.detail?.conversation_id || e.detail?.conversationId || e.detail?.id;
+      }
+
+      // Listen on widget element directly
+      ['disconnect', 'conversation-end', 'session-end', 'elevenlabs-convai:disconnect'].forEach(function(evt) {
+        widget.addEventListener(evt, function(e) { triggerPostCall(getConvId(e)); });
       });
 
-      document.addEventListener('DOMContentLoaded', function () {
-        ['disconnect', 'conversation-end', 'session-end'].forEach(function (evt) {
-          widget.addEventListener(evt, function (e) {
-            triggerPostCall(e.detail?.conversation_id || e.detail?.conversationId || e.detail?.id);
-          });
-        });
+      // Also listen on window (some events bubble)
+      ['elevenlabs-convai:disconnect', 'elevenlabs-convai:call-end'].forEach(function(evt) {
+        window.addEventListener(evt, function(e) { triggerPostCall(getConvId(e)); });
       });
     }
 
