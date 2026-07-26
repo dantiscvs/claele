@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Claule</title>
+  <title>Claele</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -19,7 +19,6 @@
       overflow: hidden;
     }
 
-    /* Subtle vignette */
     body::before {
       content: '';
       position: fixed;
@@ -63,67 +62,177 @@
       user-select: none;
     }
 
-    /* Dim the ElevenLabs branding inside the widget if needed */
     elevenlabs-convai {
       --convai-background-color: transparent;
       --convai-button-color: rgba(255,255,255,0.08);
       --convai-button-border-color: rgba(255,255,255,0.15);
     }
+
+    /* Pending / loading screens */
+    .status-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      text-align: center;
+      padding: 0 2rem;
+    }
+    .status-screen.visible { display: flex; }
+    .status-screen p {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.35);
+      line-height: 1.6;
+      max-width: 280px;
+    }
+    .status-screen .label {
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+    }
+    .signout {
+      margin-top: 1rem;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.25);
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: none;
+      border: none;
+      transition: color 0.2s;
+    }
+    .signout:hover { color: rgba(255,255,255,0.55); }
   </style>
 </head>
 <body>
   <div class="wrapper">
-    <div class="wordmark">Claule</div>
-    <div class="widget-area">
+    <div class="wordmark">Claele</div>
+
+    <!-- Loading state -->
+    <div class="status-screen" id="screen-loading">
+      <div class="label">Loading...</div>
+    </div>
+
+    <!-- Pending approval state -->
+    <div class="status-screen" id="screen-pending">
+      <div class="label">Pending approval</div>
+      <p>Your account is being reviewed. You'll have access shortly.</p>
+      <button class="signout" onclick="signOut()">Sign out</button>
+    </div>
+
+    <!-- Main widget (shown when approved) -->
+    <div class="widget-area" id="widget-area" style="display:none">
       <elevenlabs-convai agent-id="agent_4001kyds411mf0ht9ahcn81rc5bt"></elevenlabs-convai>
     </div>
+
     <div class="tagline">speak &middot; think &middot; explore</div>
   </div>
 
   <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
 
   <script>
-    // Load memories before conversation starts
-    (async function () {
-      try {
-        const r = await fetch('https://theadventure.app.n8n.cloud/webhook/claule-memory-load');
-        const d = await r.json();
-        if (d.memories) {
-          document.querySelector('elevenlabs-convai')
-            .setAttribute('dynamic-variables', JSON.stringify({ past_memories: d.memories }));
-        }
-      } catch (e) {
-        // Memory load failed — Claule starts fresh, no blocking
+    const SB_URL = 'https://rzkykbwszqcpxrggmivr.supabase.co';
+    const SB_KEY = 'sb_publishable_5gzlAh1HwhMVCn41k6-Jxg_PsnsRlHB';
+
+    function showScreen(id) {
+      ['screen-loading', 'screen-pending'].forEach(s => {
+        document.getElementById(s).classList.remove('visible');
+      });
+      document.getElementById('widget-area').style.display = 'none';
+      if (id === 'widget') {
+        document.getElementById('widget-area').style.display = 'flex';
+      } else {
+        document.getElementById(id).classList.add('visible');
       }
-    })();
+    }
 
-    // Auto-save memories when conversation ends
-    window.addEventListener('elevenlabs-convai:disconnect', function (e) {
-      const conversationId = e.detail?.conversation_id || e.detail?.conversationId;
-      if (!conversationId) return;
-      fetch('https://theadventure.app.n8n.cloud/webhook/claule-post-call', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversation_id: conversationId })
-      }).catch(() => {});
-    });
+    function signOut() {
+      localStorage.removeItem('claele_session');
+      window.location.href = 'login.html';
+    }
 
-    // Also listen on the widget element itself
-    document.addEventListener('DOMContentLoaded', function () {
+    async function sbGet(path, token) {
+      const res = await fetch(SB_URL + path, {
+        headers: {
+          'apikey': SB_KEY,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      return res.json();
+    }
+
+    async function init() {
+      showScreen('screen-loading');
+
+      // Check session
+      const raw = localStorage.getItem('claele_session');
+      if (!raw) { window.location.href = 'login.html'; return; }
+
+      let session;
+      try { session = JSON.parse(raw); } catch(e) { window.location.href = 'login.html'; return; }
+      const { access_token, user_id } = session;
+      if (!access_token || !user_id) { window.location.href = 'login.html'; return; }
+
+      // Fetch user profile
+      let profile = null;
+      try {
+        const profiles = await sbGet(`/rest/v1/profiles?id=eq.${user_id}&select=name,user_context,approved`, access_token);
+        profile = Array.isArray(profiles) ? profiles[0] : null;
+      } catch(e) {}
+
+      if (!profile) {
+        // Profile not created yet (registration still processing)
+        showScreen('screen-pending');
+        return;
+      }
+
+      if (!profile.approved) {
+        showScreen('screen-pending');
+        return;
+      }
+
+      // Load memories for this user
+      let pastMemories = '';
+      try {
+        const r = await fetch(`https://theadventure.app.n8n.cloud/webhook/claele-memory-load?user_id=${encodeURIComponent(user_id)}`);
+        const d = await r.json();
+        if (d.memories) pastMemories = d.memories;
+      } catch(e) {}
+
+      // Wire up the widget with user-specific dynamic variables
       const widget = document.querySelector('elevenlabs-convai');
-      if (!widget) return;
-      ['disconnect', 'conversation-end', 'session-end'].forEach(function (evt) {
-        widget.addEventListener(evt, function (e) {
-          const conversationId = e.detail?.conversation_id || e.detail?.conversationId || e.detail?.id;
-          if (!conversationId) return;
-          fetch('https://theadventure.app.n8n.cloud/webhook/claule-post-call', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversation_id: conversationId })
-          }).catch(() => {});
+      widget.setAttribute('dynamic-variables', JSON.stringify({
+        past_memories: pastMemories,
+        user_name: profile.name || 'there',
+        user_context: profile.user_context || ''
+      }));
+      showScreen('widget');
+
+      // Post-call: save memories with user_id
+      function triggerPostCall(conversationId) {
+        if (!conversationId) return;
+        fetch('https://theadventure.app.n8n.cloud/webhook/claele-post-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversation_id: conversationId, user_id: user_id })
+        }).catch(() => {});
+      }
+
+      window.addEventListener('elevenlabs-convai:disconnect', function (e) {
+        triggerPostCall(e.detail?.conversation_id || e.detail?.conversationId);
+      });
+
+      document.addEventListener('DOMContentLoaded', function () {
+        ['disconnect', 'conversation-end', 'session-end'].forEach(function (evt) {
+          widget.addEventListener(evt, function (e) {
+            triggerPostCall(e.detail?.conversation_id || e.detail?.conversationId || e.detail?.id);
+          });
         });
       });
-    });
+    }
+
+    init();
   </script>
 </body>
 </html>

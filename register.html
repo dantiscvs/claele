@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claele — Create Account</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #fff;
+      padding: 2rem 0;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.75rem;
+    }
+    .wordmark {
+      font-size: 1.15rem;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+    }
+    form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .section-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-top: 0.5rem;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: rgba(255,255,255,0.35); }
+    input::placeholder { color: rgba(255,255,255,0.3); }
+
+    .upload-zone {
+      width: 100%;
+      border: 1px dashed rgba(255,255,255,0.18);
+      border-radius: 6px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.4);
+      position: relative;
+    }
+    .upload-zone:hover { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.03); }
+    .upload-zone.has-file { border-color: rgba(255,255,255,0.4); color: rgba(255,255,255,0.75); }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: none;
+    }
+
+    .instructions {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      padding: 1rem 1.1rem;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.65;
+    }
+    .instructions strong {
+      color: rgba(255,255,255,0.65);
+      font-weight: 500;
+    }
+    .instructions ol {
+      padding-left: 1.1rem;
+      margin-top: 0.5rem;
+    }
+    .instructions li { margin-bottom: 0.3rem; }
+    .instructions .skip-note {
+      margin-top: 0.75rem;
+      color: rgba(255,255,255,0.3);
+      font-style: italic;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.88rem;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: background 0.2s;
+      margin-top: 0.25rem;
+    }
+    button:hover { background: rgba(255,255,255,0.14); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .msg { font-size: 0.8rem; text-align: center; min-height: 1.1rem; }
+    .msg.error { color: rgba(255, 100, 100, 0.9); }
+    .msg.success { color: rgba(100, 220, 130, 0.9); }
+
+    .pending-screen {
+      display: none;
+      text-align: center;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+    .pending-screen .icon { font-size: 2rem; opacity: 0.6; }
+    .pending-screen h2 {
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.7);
+    }
+    .pending-screen p {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.35);
+      line-height: 1.6;
+      max-width: 300px;
+    }
+
+    .footer-link {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+    }
+    .footer-link a { color: rgba(255,255,255,0.55); text-decoration: none; }
+    .footer-link a:hover { color: rgba(255,255,255,0.85); }
+    .tagline {
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="wordmark">Claele</div>
+
+    <!-- Registration form -->
+    <form id="form">
+      <div class="section-label">Your account</div>
+      <input type="text" id="name" placeholder="Your first name" required />
+      <input type="email" id="email" placeholder="Email" required autocomplete="email" />
+      <input type="password" id="password" placeholder="Password (min 8 characters)" required minlength="8" autocomplete="new-password" />
+
+      <div class="section-label">Import your memory (optional)</div>
+
+      <div class="instructions">
+        <strong>How to export your Gemini conversations:</strong>
+        <ol>
+          <li>Go to <strong>myaccount.google.com</strong></li>
+          <li>Click <strong>Data &amp; Privacy</strong></li>
+          <li>Scroll to <strong>Download your data</strong> (Google Takeout)</li>
+          <li>Select only <strong>Gemini Apps Activity</strong></li>
+          <li>Export and download the ZIP file</li>
+          <li>Inside the ZIP, find the <strong>.json</strong> conversation file</li>
+          <li>Upload that file below</li>
+        </ol>
+        <p class="skip-note">Skip this — Claele will build your memory from scratch through conversation.</p>
+      </div>
+
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="gemini-file" accept=".json,.html,.zip" />
+        <span id="upload-label">Click to upload your Gemini export</span>
+      </div>
+
+      <button type="submit" id="btn">Create Account</button>
+      <div class="msg error" id="msg"></div>
+    </form>
+
+    <!-- Pending approval screen -->
+    <div class="pending-screen" id="pending">
+      <div class="icon">&#10003;</div>
+      <h2>Account created</h2>
+      <p>Your account is pending approval. You'll be able to start talking once access is confirmed.</p>
+    </div>
+
+    <div class="footer-link" id="signin-link">Already have an account? <a href="login.html">Sign in</a></div>
+    <div class="tagline">speak &middot; think &middot; explore</div>
+  </div>
+
+  <script>
+    const SB_URL = 'https://rzkykbwszqcpxrggmivr.supabase.co';
+    const SB_KEY = 'sb_publishable_5gzlAh1HwhMVCn41k6-Jxg_PsnsRlHB';
+    const N8N_REGISTER = 'https://theadventure.app.n8n.cloud/webhook/claele-register';
+
+    // File upload label
+    const fileInput = document.getElementById('gemini-file');
+    const uploadZone = document.getElementById('upload-zone');
+    const uploadLabel = document.getElementById('upload-label');
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) {
+        uploadLabel.textContent = fileInput.files[0].name;
+        uploadZone.classList.add('has-file');
+      } else {
+        uploadLabel.textContent = 'Click to upload your Gemini export';
+        uploadZone.classList.remove('has-file');
+      }
+    });
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn');
+      const msg = document.getElementById('msg');
+      btn.disabled = true;
+      btn.textContent = 'Creating account...';
+      msg.textContent = '';
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const file = fileInput.files[0];
+
+      try {
+        // 1. Create Supabase auth user
+        const res = await fetch(`${SB_URL}/auth/v1/signup`, {
+          method: 'POST',
+          headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error_description || data.message || 'Registration failed');
+        const user_id = data.user?.id;
+        if (!user_id) throw new Error('Could not create account — please try again');
+
+        // 2. Read Gemini file if provided
+        let gemini_content = '';
+        if (file) {
+          gemini_content = await file.text();
+          // Truncate to 500KB to avoid hitting n8n limits
+          if (gemini_content.length > 500000) gemini_content = gemini_content.slice(0, 500000);
+        }
+
+        // 3. Send to n8n registration workflow (creates profile + processes Gemini)
+        await fetch(N8N_REGISTER, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id, name, email, gemini_content })
+        }).catch(() => {}); // Non-blocking — profile can be created even if this times out
+
+        // 4. Show pending screen
+        document.getElementById('form').style.display = 'none';
+        document.getElementById('signin-link').style.display = 'none';
+        const pending = document.getElementById('pending');
+        pending.style.display = 'flex';
+
+      } catch (ex) {
+        msg.textContent = ex.message;
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+</body>
+</html>
