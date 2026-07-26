@@ -83,6 +83,7 @@
   <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
 
   <script>
+    // Load memories before conversation starts
     (async function () {
       try {
         const r = await fetch('https://theadventure.app.n8n.cloud/webhook/claule-memory-load');
@@ -95,6 +96,34 @@
         // Memory load failed — Claule starts fresh, no blocking
       }
     })();
+
+    // Auto-save memories when conversation ends
+    window.addEventListener('elevenlabs-convai:disconnect', function (e) {
+      const conversationId = e.detail?.conversation_id || e.detail?.conversationId;
+      if (!conversationId) return;
+      fetch('https://theadventure.app.n8n.cloud/webhook/claule-post-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: conversationId })
+      }).catch(() => {});
+    });
+
+    // Also listen on the widget element itself
+    document.addEventListener('DOMContentLoaded', function () {
+      const widget = document.querySelector('elevenlabs-convai');
+      if (!widget) return;
+      ['disconnect', 'conversation-end', 'session-end'].forEach(function (evt) {
+        widget.addEventListener(evt, function (e) {
+          const conversationId = e.detail?.conversation_id || e.detail?.conversationId || e.detail?.id;
+          if (!conversationId) return;
+          fetch('https://theadventure.app.n8n.cloud/webhook/claule-post-call', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversation_id: conversationId })
+          }).catch(() => {});
+        });
+      });
+    });
   </script>
 </body>
 </html>
