@@ -231,10 +231,12 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     const SB_URL = 'https://rzkykbwszqcpxrggmivr.supabase.co';
     const SB_KEY = 'sb_publishable_5gzlAh1HwhMVCn41k6-Jxg_PsnsRlHB';
     const N8N_REGISTER = 'https://theadventure.app.n8n.cloud/webhook/claele-register';
+    const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
     const fileInput = document.getElementById('gemini-file');
     const uploadZone = document.getElementById('upload-zone');
@@ -252,16 +254,11 @@
 
     async function extractGeminiContent(file) {
       if (!file.name.endsWith('.zip')) {
-        // Plain JSON or HTML — read directly
         const text = await file.text();
         return text.slice(0, 500000);
       }
-
-      // Unpack the ZIP in-browser
       const zip = await JSZip.loadAsync(file);
       const files = Object.values(zip.files).filter(f => !f.dir);
-
-      // Prefer JSON files with "gemini" or "activity" in the path
       const scored = files.map(f => {
         const name = f.name.toLowerCase();
         let score = 0;
@@ -272,11 +269,8 @@
         return { f, score };
       });
       scored.sort((a, b) => b.score - a.score);
-
       if (!scored.length) throw new Error('No conversation data found in the ZIP file.');
-
-      const best = scored[0].f;
-      const text = await best.async('text');
+      const text = await scored[0].f.async('text');
       return text.slice(0, 500000);
     }
 
@@ -294,15 +288,10 @@
       const file = fileInput.files[0];
 
       try {
-        // 1. Create Supabase auth user
-        const res = await fetch(`${SB_URL}/auth/v1/signup`, {
-          method: 'POST',
-          headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error_description || data.message || 'Registration failed');
-        const user_id = data.user?.id || data.id;
+        // 1. Create Supabase auth user via JS SDK
+        const { data, error } = await sb.auth.signUp({ email, password });
+        if (error) throw new Error(error.message);
+        const user_id = data.user?.id;
         if (!user_id) throw new Error('Could not create account — please try again');
 
         // 2. Extract Gemini content (handles ZIP automatically)

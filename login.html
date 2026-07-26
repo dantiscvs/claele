@@ -114,9 +114,11 @@
     <div class="tagline">speak &middot; think &middot; explore</div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     const SB_URL = 'https://rzkykbwszqcpxrggmivr.supabase.co';
     const SB_KEY = 'sb_publishable_5gzlAh1HwhMVCn41k6-Jxg_PsnsRlHB';
+    const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
     // Redirect if already signed in
     const existing = localStorage.getItem('claele_session');
@@ -131,20 +133,15 @@
       msg.textContent = '';
 
       try {
-        const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-          method: 'POST',
-          headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: document.getElementById('email').value,
-            password: document.getElementById('password').value
-          })
+        const { data, error } = await sb.auth.signInWithPassword({
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error_description || data.message || 'Sign in failed');
+        if (error) throw new Error(error.message);
 
         localStorage.setItem('claele_session', JSON.stringify({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
           user_id: data.user.id
         }));
         window.location.href = 'index.html';
