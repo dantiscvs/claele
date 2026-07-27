@@ -205,7 +205,8 @@
       widget.setAttribute('dynamic-variables', JSON.stringify({
         past_memories: pastMemories,
         user_name: profile.name || 'there',
-        user_context: profile.user_context || ''
+        user_context: profile.user_context || '',
+        user_id: user_id
       }));
       showScreen('widget');
 
